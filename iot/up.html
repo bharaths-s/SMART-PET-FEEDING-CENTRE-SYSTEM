@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Pet Feeding Centre</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #8449a4;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #333;
+        }
+        .data-box {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            background: #eee;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #218838;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #ffd700;
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Smart Pet Feeding Centre</h2>
+
+        <div class="data-box">
+            <span>Food Level:</span>
+            <span id="food-level">Loading...</span>
+        </div>
+
+        <div class="data-box">
+            <span>Moisture Level:</span>
+            <span id="moisture-level">Loading...</span>
+        </div>
+
+        <h3>Notifications</h3>
+        <ul id="notifications">
+            <li>Loading...</li>
+        </ul>
+
+        <button id="check-food-button">Check Food Status</button>
+        <p id="food-status"></p>
+    </div>
+
+    <script>
+        // ThingSpeak Details
+        const channelId = "2804055";
+        const readApiKey = "UXH7HA7UYXRSFZUF";
+
+        // DOM Elements
+        const foodLevelElement = document.getElementById('food-level');
+        const moistureLevelElement = document.getElementById('moisture-level');
+        const notificationsElement = document.getElementById('notifications');
+        const checkFoodButton = document.getElementById('check-food-button');
+        const foodStatusElement = document.getElementById('food-status');
+
+        // Fetch Data from ThingSpeak
+        async function fetchData() {
+            try {
+                const response = await fetch(
+                    `https://api.thingspeak.com/channels/${channelId}/feeds.json?api_key=${readApiKey}&results=1`
+                );
+                if (!response.ok) throw new Error('Failed to fetch data');
+                const data = await response.json();
+                const latestFeed = data.feeds[0];
+
+                // Update Food and Moisture Levels as Numbers (Not Percentage)
+                const foodLevel = parseFloat(latestFeed.field1) || 0;
+                const moistureLevel = parseFloat(latestFeed.field2) || 0;
+
+                foodLevelElement.textContent = `${foodLevel} units`;  
+                moistureLevelElement.textContent = `${moistureLevel} units`;  
+
+                // Update Notifications
+                const foodDispensed = latestFeed.field3 === '1' ? 'Food Dispensed' : '';
+                const waterDispensed = latestFeed.field4 === '1' ? 'Water Dispensed' : '';
+
+                notificationsElement.innerHTML = `
+                    ${foodDispensed ? `<li>${foodDispensed}</li>` : ''}
+                    ${waterDispensed ? `<li>${waterDispensed}</li>` : ''}
+                `;
+            } catch (error) {
+                console.error(error);
+                foodLevelElement.textContent = 'Error loading data';
+                moistureLevelElement.textContent = 'Error loading data';
+                notificationsElement.innerHTML = '<li>Error fetching notifications</li>';
+            }
+        }
+
+        // Check for Empty Food Container
+        function checkFoodStatus() {
+            const foodLevel = parseFloat(foodLevelElement.textContent);
+            if (foodLevel === 0) {
+                foodStatusElement.textContent = 'Food container is empty!';
+            } else {
+                foodStatusElement.textContent = 'Food container has enough food.';
+            }
+        }
+
+        // Initialize Fetch and Set Interval
+        fetchData();
+        setInterval(fetchData, 15000);
+
+        // Add Event Listener to Check Food Button
+        checkFoodButton.addEventListener('click', checkFoodStatus);
+    </script>
+
+</body>
+</html>
